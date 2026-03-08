@@ -1,0 +1,421 @@
+# ------------------------------------------------------------
+# Python cache files
+# ------------------------------------------------------------
+# Python creates these automatically when it runs your code.
+# They help Python load files faster, but they should not be
+# saved in Git because they can be recreated any time.
+
+__pycache__/
+*.py[codz]
+*$py.class
+
+
+# ------------------------------------------------------------
+# Compiled C extension files
+# ------------------------------------------------------------
+# Some Python packages include compiled C code.
+# These generated binary files should not be committed.
+
+*.so
+
+
+# ------------------------------------------------------------
+# Build and packaging output
+# ------------------------------------------------------------
+# These folders and files are created when building or packaging
+# your project for distribution. They are generated output, not
+# source code, so they are usually ignored.
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+
+# ------------------------------------------------------------
+# PyInstaller files
+# ------------------------------------------------------------
+# PyInstaller is used to turn Python programs into executable apps.
+# These files are created during that process and usually should
+# not be tracked in Git.
+
+*.manifest
+*.spec
+
+
+# ------------------------------------------------------------
+# Installer log files
+# ------------------------------------------------------------
+# These are log or temporary files created during package installs.
+# They are only useful locally for troubleshooting.
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+
+# ------------------------------------------------------------
+# Test, coverage, and cache files
+# ------------------------------------------------------------
+# These are generated when running tests or measuring code coverage.
+# They help with development, but they do not belong in source control.
+
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+
+# ------------------------------------------------------------
+# Translation build files
+# ------------------------------------------------------------
+# These are compiled or template translation files used in apps
+# with multilingual support.
+
+*.mo
+*.pot
+
+
+# ------------------------------------------------------------
+# Django project local files
+# ------------------------------------------------------------
+# These are common Django-generated local files such as logs,
+# local settings, and SQLite database files.
+
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+
+# ------------------------------------------------------------
+# Flask project local files
+# ------------------------------------------------------------
+# These are folders used by Flask for instance-specific config
+# and cached web assets.
+
+instance/
+.webassets-cache
+
+
+# ------------------------------------------------------------
+# Scrapy project files
+# ------------------------------------------------------------
+# Scrapy creates this folder during crawling work.
+
+.scrapy
+
+
+# ------------------------------------------------------------
+# Sphinx documentation build output
+# ------------------------------------------------------------
+# Sphinx generates built documentation here.
+# The source docs should be committed, not the built output.
+
+docs/_build/
+
+
+# ------------------------------------------------------------
+# PyBuilder output
+# ------------------------------------------------------------
+# Generated files from the PyBuilder build tool.
+
+.pybuilder/
+target/
+
+
+# ------------------------------------------------------------
+# Jupyter Notebook checkpoints
+# ------------------------------------------------------------
+# Jupyter creates checkpoint files automatically while you work.
+# They are temporary backup-style files and are not usually needed in Git.
+
+.ipynb_checkpoints
+
+
+# ------------------------------------------------------------
+# IPython configuration
+# ------------------------------------------------------------
+# Local IPython profile and configuration files for a specific machine.
+
+profile_default/
+ipython_config.py
+
+
+# ------------------------------------------------------------
+# pyenv version file
+# ------------------------------------------------------------
+# This file can be used to pin a local Python version.
+# Some teams keep it, others ignore it depending on whether
+# they want machine-specific version settings in Git.
+
+# .python-version
+
+
+# ------------------------------------------------------------
+# pipenv lock file
+# ------------------------------------------------------------
+# Pipfile.lock records exact package versions.
+# For applications, it is often committed.
+# For libraries, teams sometimes leave it out.
+# It is commented out here, meaning Git will still track it unless
+# you remove the #.
+
+# Pipfile.lock
+
+
+# ------------------------------------------------------------
+# uv lock file
+# ------------------------------------------------------------
+# uv.lock pins exact dependency versions.
+# Many application projects commit it for reproducibility.
+# It is commented out here, so it is currently NOT being ignored.
+
+# uv.lock
+
+
+# ------------------------------------------------------------
+# Poetry lock/config files
+# ------------------------------------------------------------
+# poetry.lock is usually committed for applications.
+# Some teams ignore it for reusable libraries.
+# These are commented out, so they are currently NOT ignored.
+
+# poetry.lock
+# poetry.toml
+
+
+# ------------------------------------------------------------
+# PDM files
+# ------------------------------------------------------------
+# pdm.lock and pdm.toml are often kept in Git depending on the project.
+# .pdm-python and build output are usually machine-specific/generated.
+
+# pdm.lock
+# pdm.toml
+.pdm-python
+.pdm-build/
+
+
+# ------------------------------------------------------------
+# Pixi files
+# ------------------------------------------------------------
+# pixi.lock may be committed depending on the project.
+# .pixi is the local environment folder and should usually be ignored.
+
+# pixi.lock
+.pixi
+
+
+# ------------------------------------------------------------
+# PEP 582 package folder
+# ------------------------------------------------------------
+# Some Python tools install packages into this local folder
+# instead of a virtual environment.
+
+__pypackages__/
+
+
+# ------------------------------------------------------------
+# Celery runtime files
+# ------------------------------------------------------------
+# Celery may create schedule and process ID files while running.
+
+celerybeat-schedule
+celerybeat.pid
+
+
+# ------------------------------------------------------------
+# Redis files
+# ------------------------------------------------------------
+# Redis may create local database and process files.
+
+*.rdb
+*.aof
+*.pid
+
+
+# ------------------------------------------------------------
+# RabbitMQ files
+# ------------------------------------------------------------
+# RabbitMQ creates local state and data folders that should not
+# be committed.
+
+mnesia/
+rabbitmq/
+rabbitmq-data/
+
+
+# ------------------------------------------------------------
+# ActiveMQ files
+# ------------------------------------------------------------
+# Local ActiveMQ runtime data.
+
+activemq-data/
+
+
+# ------------------------------------------------------------
+# SageMath parsed files
+# ------------------------------------------------------------
+# Generated Python files created by SageMath.
+
+*.sage.py
+
+
+# ------------------------------------------------------------
+# Environment and virtual environment files
+# ------------------------------------------------------------
+# These often contain installed packages, local machine setup,
+# or secret environment values. These should almost always be ignored.
+
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+
+# ------------------------------------------------------------
+# Spyder IDE settings
+# ------------------------------------------------------------
+# Local project settings for the Spyder editor.
+
+.spyderproject
+.spyproject
+
+
+# ------------------------------------------------------------
+# Rope IDE settings
+# ------------------------------------------------------------
+# Local project settings used by the Rope refactoring library/tool.
+
+.ropeproject
+
+
+# ------------------------------------------------------------
+# MkDocs built site
+# ------------------------------------------------------------
+# Generated static documentation output.
+
+ /site
+
+
+# ------------------------------------------------------------
+# mypy cache files
+# ------------------------------------------------------------
+# mypy creates these when performing static type checking.
+
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+
+# ------------------------------------------------------------
+# Pyre type checker files
+# ------------------------------------------------------------
+# Local files generated by the Pyre type checker.
+
+.pyre/
+
+
+# ------------------------------------------------------------
+# pytype files
+# ------------------------------------------------------------
+# Local files generated by Google's pytype tool.
+
+.pytype/
+
+
+# ------------------------------------------------------------
+# Cython debug files
+# ------------------------------------------------------------
+# Generated debug output from Cython builds.
+
+cython_debug/
+
+
+# ------------------------------------------------------------
+# PyCharm / JetBrains settings
+# ------------------------------------------------------------
+# .idea/ contains editor-specific project settings.
+# It is commented out here, so it is currently NOT ignored.
+
+# .idea/
+
+
+# ------------------------------------------------------------
+# Abstra files
+# ------------------------------------------------------------
+# Abstra may store local credentials, state, and settings here.
+# This should usually stay out of Git.
+
+.abstra/
+
+
+# ------------------------------------------------------------
+# Visual Studio Code settings
+# ------------------------------------------------------------
+# .vscode/ contains workspace-specific editor settings.
+# It is commented out here, so it is currently NOT ignored.
+
+# .vscode/
+
+
+# ------------------------------------------------------------
+# Ruff cache
+# ------------------------------------------------------------
+# Ruff creates this cache folder when linting or formatting code.
+
+.ruff_cache/
+
+
+# ------------------------------------------------------------
+# PyPI configuration
+# ------------------------------------------------------------
+# This may contain publishing configuration and sometimes sensitive info.
+
+.pypirc
+
+
+# ------------------------------------------------------------
+# Marimo files
+# ------------------------------------------------------------
+# Generated static files and language server files used by Marimo.
+
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+
+
+# ------------------------------------------------------------
+# Streamlit secrets
+# ------------------------------------------------------------
+# This file often contains API keys or other secrets used by Streamlit apps.
+# It should not be committed.
+
+.streamlit/secrets.toml
