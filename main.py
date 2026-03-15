@@ -253,9 +253,12 @@ def build_model():
     model without modifying the rest of the codebase.
     """
 
+    # Read model name from environment configuration
+    str_model_name = require_env_var("MODEL_NAME")
+
     return init_chat_model(
-        model="gpt-4.1",  # model identifier
-        temperature=0,   # deterministic output improves consistency
+        model=str_model_name,  # model identifier from .env
+        temperature=0,         # deterministic output improves consistency
     )
 
 
