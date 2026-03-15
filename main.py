@@ -1,32 +1,62 @@
+# -----------------------------------------------------------------------------
+# Future import
+# -----------------------------------------------------------------------------
+# Enables postponed evaluation of type hints.
+# This allows forward references in type annotations and improves compatibility
+# with static type checkers and modern Python typing features.
 from __future__ import annotations
+
 
 # -----------------------------------------------------------------------------
 # Standard library imports
 # -----------------------------------------------------------------------------
-# Used for environment variable access and type hints
+
+# Provides access to environment variables used for configuration such as
+# API credentials and tracing flags.
 import os
+
+# Used for static typing of list-based fields in Pydantic schemas.
 from typing import List
+
 
 # -----------------------------------------------------------------------------
 # Third-party libraries
 # -----------------------------------------------------------------------------
-# dotenv allows us to load environment variables from a .env file
-# This is standard practice when working with API keys
+
+# Loads environment variables from a `.env` file during local development.
+# This avoids hardcoding credentials in the source code.
 from dotenv import load_dotenv
 
-# Pydantic provides strongly typed data models with validation
-# This ensures the LLM output matches a predictable structure
+# Pydantic is used to define strongly typed schemas for model outputs.
+# This ensures LLM responses conform to a predictable structure that can be
+# safely consumed by downstream systems.
 from pydantic import BaseModel, Field, ValidationError
+
 
 # -----------------------------------------------------------------------------
 # LangChain imports
 # -----------------------------------------------------------------------------
-# init_chat_model is the modern LangChain entry point for initializing LLMs
-# It provides a provider-agnostic interface across OpenAI, Anthropic, Ollama, etc.
+
+# Modern LangChain interface for initializing chat models.
+# This abstraction allows switching between providers (OpenAI, Anthropic, etc.)
+# without rewriting application logic.
 from langchain.chat_models import init_chat_model
 
-# ChatPromptTemplate provides structured prompts for chat models
+# ChatPromptTemplate provides a structured way to construct multi-message
+# prompts that align with chat-model APIs.
 from langchain_core.prompts import ChatPromptTemplate
+
+
+# -----------------------------------------------------------------------------
+# LangSmith imports
+# -----------------------------------------------------------------------------
+
+# The traceable decorator allows instrumenting functions so that their execution
+# appears as trace spans in LangSmith.
+#
+# This provides visibility into inputs, outputs, failures, and execution order
+# across complex LLM pipelines.
+from langsmith import traceable
 
 
 # -----------------------------------------------------------------------------
@@ -34,185 +64,179 @@ from langchain_core.prompts import ChatPromptTemplate
 # -----------------------------------------------------------------------------
 def require_env_var(variable_name: str) -> str:
     """
-    Validate that a required environment variable exists.
+    Ensure that a required environment variable is present.
 
-    Why this matters:
-    Production AI applications depend heavily on environment configuration
-    (API keys, service URLs, feature flags). Failing early prevents obscure
-    runtime failures later in the pipeline.
+    In production AI systems, missing configuration (API keys, service URLs)
+    can cause obscure runtime failures. This helper enforces a fail-fast
+    strategy so configuration problems are detected immediately at startup.
     """
+
+    # Retrieve the environment variable and remove surrounding whitespace
     variable_value = os.getenv(variable_name, "").strip()
 
+    # If the variable is missing or empty, raise a clear runtime error
     if not variable_value:
         raise RuntimeError(
             f"Required environment variable '{variable_name}' is not set. "
             f"Add it to your .env file before running this script."
         )
 
+    # Return the validated variable value
     return variable_value
+
+
+def validate_langsmith_configuration() -> None:
+    """
+    Validate tracing configuration only if tracing is enabled.
+
+    LangSmith tracing is optional in local environments. However, if tracing
+    is enabled via environment configuration, then a valid API key must exist.
+    """
+
+    # Determine whether tracing is enabled via environment configuration
+    bool_tracing_enabled = (
+        os.getenv("LANGSMITH_TRACING", "").strip().lower() == "true"
+    )
+
+    # If tracing is enabled, ensure the LangSmith API key is available
+    if bool_tracing_enabled:
+        require_env_var("LANGSMITH_API_KEY")
 
 
 # -----------------------------------------------------------------------------
 # Structured output schema definitions
 # -----------------------------------------------------------------------------
-# Instead of returning raw text from the LLM, we define structured data models.
-# This allows the model response to be validated and used programmatically.
-#
-# This pattern is common in production LLM systems where downstream systems
-# expect predictable data formats (APIs, dashboards, pipelines).
-
-
-class TimelineEvent(BaseModel):
+class CustomerComplaintAnalysis(BaseModel):
     """
-    Represents one event in a person's career timeline.
+    Structured representation of an analysed customer service case.
+
+    Converting free-text case notes into structured data allows the output to
+    be used in downstream workflows such as dashboards, triage systems,
+    quality assurance pipelines, or operational reporting.
     """
-    year: str = Field(description="The year or approximate date of the event")
-    event: str = Field(description="A concise description of what happened")
-    significance: str = Field(description="Why the event matters")
 
-
-class BiographyAnalysis(BaseModel):
-    """
-    Structured output schema representing a full biography analysis.
-
-    Using Pydantic schemas with LLMs improves reliability because the
-    generated output must conform to the expected structure.
-    """
-    person_name: str = Field(description="Full name of the person")
-
-    executive_summary: str = Field(
-        description="A concise 2-4 sentence summary"
+    # Concise summary of the customer's issue
+    customer_issue_summary: str = Field(
+        description="Clear summary of the customer's main issue in 2-4 sentences"
     )
 
-    key_organisations: List[str] = Field(
-        default_factory=list,
-        description="Major companies, organisations, or institutions mentioned"
+    # Product or service area affected by the issue
+    product_area: str = Field(
+        description="Primary service or product involved in the case"
     )
 
-    timeline: List[TimelineEvent] = Field(
-        default_factory=list,
-        description="Chronological list of major events"
+    # High-level classification of the issue
+    issue_category: str = Field(
+        description="Primary complaint category"
     )
 
-    major_themes: List[str] = Field(
-        default_factory=list,
-        description="High-level themes such as entrepreneurship, politics, controversy"
+    # Operational severity classification
+    severity_level: str = Field(
+        description="Relative urgency level such as low, medium, or high"
     )
 
-    controversial_points: List[str] = Field(
+    # List of ways the customer was affected
+    customer_impact: List[str] = Field(
         default_factory=list,
-        description="Important controversial or polarising topics mentioned in the text"
+        description="Concrete ways the customer was impacted"
     )
 
-    interview_questions: List[str] = Field(
+    # Explicit vulnerability signals detected in the case notes
+    vulnerability_indicators: List[str] = Field(
         default_factory=list,
-        description="Good follow-up questions someone could ask about this biography"
+        description="Indicators of vulnerability present in the text"
+    )
+
+    # Possible conduct or service-risk indicators
+    conduct_risk_flags: List[str] = Field(
+        default_factory=list,
+        description="Potential customer-outcome or service-risk concerns"
+    )
+
+    # Ordered timeline events extracted from the text
+    key_timeline_events: List[str] = Field(
+        default_factory=list,
+        description="Chronological sequence of important events"
+    )
+
+    # Operational next steps that may help resolve the case
+    recommended_next_actions: List[str] = Field(
+        default_factory=list,
+        description="Suggested next actions based on the information provided"
+    )
+
+    # Questions that an agent or investigator may ask next
+    follow_up_questions: List[str] = Field(
+        default_factory=list,
+        description="Follow-up questions that could help resolve the case"
     )
 
 
 # -----------------------------------------------------------------------------
 # Input data
 # -----------------------------------------------------------------------------
-def get_biography_text() -> str:
+def get_customer_case_text() -> str:
+    """
+    Provide sample case text for demonstration.
+
+    In real-world systems this input would typically come from a database,
+    support ticket system, document store, or event stream.
+    """
+
     return """
-    Harrison Chase is a software engineer and entrepreneur best known as the
-    creator of LangChain, one of the most influential open-source frameworks
-    for building applications powered by large language models (LLMs).
+    The customer contacted support to complain that their account was locked
+    after several attempted card payments were declined while trying to pay
+    rent and utility bills.
 
-    Chase studied computer science and began his career as a machine learning
-    engineer at Kensho Technologies, a financial AI company later acquired by
-    S&P Global. At Kensho, he worked on systems that combined machine learning
-    with structured financial data and real-world analytical workflows. This
-    experience exposed him to a core challenge in applied AI: integrating
-    machine learning models with existing software systems and external data.
+    They explained they had already spoken to two agents over the last three
+    days and received conflicting advice.
 
-    In late 2022, shortly after OpenAI released ChatGPT and generative AI began
-    capturing global attention, Chase launched the LangChain project. His goal
-    was to provide a developer framework that made it easier to connect large
-    language models with external tools, APIs, documents, and databases.
+    The customer relies on the account for salary payments and daily living
+    expenses. They reported stress due to the possibility that a rent payment
+    might now be late.
 
-    LangChain introduced a number of abstractions that quickly became standard
-    concepts in the LLM developer ecosystem. These included prompts, chains,
-    agents, tools, memory modules, and retrieval pipelines. These abstractions
-    allowed developers to orchestrate complex AI workflows while keeping code
-    modular and maintainable.
-
-    As the project gained traction, LangChain became one of the fastest-growing
-    open-source AI frameworks in the world. Within months, thousands of
-    developers began using it to build chatbots, document analysis systems,
-    research assistants, coding copilots, and enterprise automation tools.
-
-    The rapid adoption of LangChain also sparked debates within the AI
-    engineering community. Some critics argued that the framework introduced
-    too much abstraction and could make debugging complex systems more
-    difficult. Others praised it for accelerating experimentation and lowering
-    the barrier to entry for developers working with large language models.
-
-    In response to the growing complexity of AI agents, Chase and the LangChain
-    team later introduced LangGraph, a framework designed for building
-    stateful, deterministic agent workflows using graph-based execution.
-    LangGraph aimed to improve reliability and control in AI systems by making
-    reasoning flows explicit and traceable.
-
-    The ecosystem expanded further with the creation of LangSmith, a platform
-    designed for debugging, evaluating, and monitoring LLM applications in
-    production. LangSmith allows developers to inspect agent reasoning traces,
-    measure performance, and improve prompt reliability.
-
-    Under Chase's leadership, LangChain evolved from a small open-source
-    experiment into a full AI developer platform used by startups, research
-    labs, and major technology companies. The framework now supports numerous
-    model providers including OpenAI, Anthropic, Google, and local models
-    running through tools such as Ollama.
-
-    Chase has spoken publicly about the importance of reliability and
-    observability in AI systems, arguing that building real-world AI products
-    requires much more than simply calling an LLM API. His work has focused on
-    helping developers design systems that combine reasoning, retrieval,
-    external tools, and deterministic workflows.
-
-    As the generative AI field continues to evolve, Chase remains a central
-    figure in shaping how developers build applications on top of large
-    language models. Many modern AI systems — including research assistants,
-    autonomous agents, and knowledge retrieval tools — rely on patterns that
-    were popularized by the LangChain ecosystem.
+    Internal notes suggest a fraud-prevention control may have triggered due
+    to unusual transaction activity, but this was not clearly communicated to
+    the customer.
     """.strip()
+
 
 # -----------------------------------------------------------------------------
 # Prompt construction
 # -----------------------------------------------------------------------------
 def build_prompt() -> ChatPromptTemplate:
     """
-    Creates the prompt template used to instruct the language model.
+    Construct the chat prompt used to guide the model.
 
-    Prompt design is critical in LLM applications. Here we:
-    - constrain the model to use only provided information
-    - prevent hallucinations
-    - request structured analytical output
+    Using message-based prompts mirrors the structure used by chat-based
+    language models and keeps system instructions separate from user input.
     """
 
     return ChatPromptTemplate.from_messages(
         [
             (
                 "system",
-                "You are a careful biography analysis assistant.\n"
-                "Use ONLY the information provided by the user.\n"
-                "Do not add outside facts.\n"
-                "If something is uncertain or not explicitly stated, omit it.\n"
-                "Focus on factual extraction, chronology, and clear analytical structure."
+                # System message defines behaviour constraints for the model
+                "You are a careful case analysis assistant. "
+                "Use only the information contained in the provided text. "
+                "Do not introduce external facts or assumptions. "
+                "If information is uncertain or missing, omit it."
             ),
             (
-                "human",
-                "Analyse the biography below.\n\n"
-                "Return:\n"
-                "1. The person's full name\n"
-                "2. A concise executive summary\n"
-                "3. Key organisations mentioned\n"
-                "4. A timeline of major events\n"
-                "5. Major themes in the person's career and public life\n"
-                "6. Notable controversial or polarising points\n"
-                "7. Five strong follow-up interview questions\n\n"
-                "BIOGRAPHY:\n{biography_text}"
+                "user",
+                # User message provides the task and the input text
+                "Analyse the case notes below and return:\n"
+                "1. A summary of the customer's issue\n"
+                "2. The relevant product or service area\n"
+                "3. The issue category\n"
+                "4. A severity level\n"
+                "5. Customer impact points\n"
+                "6. Any vulnerability indicators\n"
+                "7. Potential service-risk flags\n"
+                "8. A timeline of key events\n"
+                "9. Recommended next actions\n"
+                "10. Follow-up questions\n\n"
+                "CASE NOTES:\n{case_text}"
             ),
         ]
     )
@@ -223,15 +247,15 @@ def build_prompt() -> ChatPromptTemplate:
 # -----------------------------------------------------------------------------
 def build_model():
     """
-    Initialize the LLM using LangChain's provider-agnostic interface.
+    Initialise the chat model used for analysis.
 
-    `init_chat_model` allows the same code to work with multiple LLM providers
-    simply by changing the model name.
+    The provider-agnostic interface makes it easy to change the underlying
+    model without modifying the rest of the codebase.
     """
 
     return init_chat_model(
-        model="gpt-4.1",
-        temperature=0,  # deterministic output for analysis tasks
+        model="gpt-4.1",  # model identifier
+        temperature=0,   # deterministic output improves consistency
     )
 
 
@@ -240,123 +264,158 @@ def build_model():
 # -----------------------------------------------------------------------------
 def build_chain():
     """
-    Constructs the LangChain pipeline.
+    Build the LangChain pipeline.
 
-    Pipeline architecture:
-
+    The pipeline consists of:
         Prompt Template
-              │
-              ▼
+            ↓
         Chat Model
-              │
-              ▼
-    Structured Output Parser (Pydantic)
-
-    The final result is a validated Python object.
+            ↓
+        Structured Output Parser
     """
 
-    prompt = build_prompt()
+    # Build the prompt template
+    obj_prompt = build_prompt()
 
     # Bind the structured schema to the model
-    model = build_model().with_structured_output(BiographyAnalysis)
+    obj_model = build_model().with_structured_output(CustomerComplaintAnalysis)
 
-    # LCEL composition operator builds the pipeline
-    return prompt | model
+    # Compose the pipeline using the LCEL operator
+    return obj_prompt | obj_model
+
+
+# -----------------------------------------------------------------------------
+# Traced workflow
+# -----------------------------------------------------------------------------
+@traceable(
+    name="case_analysis_workflow",
+    run_type="chain",
+)
+def run_customer_case_analysis(case_text: str) -> CustomerComplaintAnalysis:
+    """
+    Execute the analysis pipeline.
+
+    The traceable decorator records this function execution in LangSmith,
+    enabling inspection of inputs, outputs, and model calls.
+    """
+
+    # Construct the pipeline
+    obj_chain = build_chain()
+
+    # Execute the chain with the provided case text
+    return obj_chain.invoke({"case_text": case_text})
 
 
 # -----------------------------------------------------------------------------
 # Output formatting
 # -----------------------------------------------------------------------------
-def print_analysis(analysis: BiographyAnalysis) -> None:
+@traceable(name="format_analysis_output")
+def print_analysis(analysis: CustomerComplaintAnalysis) -> None:
     """
-    Nicely formats the analysis results for terminal output.
+    Display the structured result in a readable console format.
 
-    Separating presentation from logic keeps the architecture clean
-    and makes it easier to replace the output layer later with:
-    - a web interface
-    - a REST API
-    - a data pipeline
+    Separating presentation logic from inference logic keeps the architecture
+    modular and easier to extend in the future.
     """
 
     print("\n" + "=" * 80)
-    print(f"BIOGRAPHY ANALYSIS: {analysis.person_name}")
+    print("CASE ANALYSIS RESULT")
     print("=" * 80)
 
-    print("\nEXECUTIVE SUMMARY")
+    print("\nSUMMARY")
     print("-" * 80)
-    print(analysis.executive_summary)
+    print(analysis.customer_issue_summary)
 
-    print("\nKEY ORGANISATIONS")
+    print("\nPRODUCT AREA")
     print("-" * 80)
-    for organisation_name in analysis.key_organisations:
-        print(f"- {organisation_name}")
+    print(analysis.product_area)
 
-    print("\nTIMELINE")
+    print("\nISSUE CATEGORY")
     print("-" * 80)
-    for timeline_event in analysis.timeline:
-        print(f"- {timeline_event.year}: {timeline_event.event}")
-        print(f"  Why it matters: {timeline_event.significance}")
+    print(analysis.issue_category)
 
-    print("\nMAJOR THEMES")
+    print("\nSEVERITY")
     print("-" * 80)
-    for theme in analysis.major_themes:
-        print(f"- {theme}")
+    print(analysis.severity_level)
 
-    print("\nCONTROVERSIAL / POLARISING POINTS")
+    print("\nCUSTOMER IMPACT")
     print("-" * 80)
-    for point in analysis.controversial_points:
-        print(f"- {point}")
+    for item in analysis.customer_impact:
+        print(f"- {item}")
 
-    print("\nFOLLOW-UP INTERVIEW QUESTIONS")
+    print("\nVULNERABILITY INDICATORS")
     print("-" * 80)
-    for index, question in enumerate(analysis.interview_questions, start=1):
+    for item in analysis.vulnerability_indicators:
+        print(f"- {item}")
+
+    print("\nSERVICE RISK FLAGS")
+    print("-" * 80)
+    for item in analysis.conduct_risk_flags:
+        print(f"- {item}")
+
+    print("\nTIMELINE EVENTS")
+    print("-" * 80)
+    for item in analysis.key_timeline_events:
+        print(f"- {item}")
+
+    print("\nRECOMMENDED ACTIONS")
+    print("-" * 80)
+    for item in analysis.recommended_next_actions:
+        print(f"- {item}")
+
+    print("\nFOLLOW-UP QUESTIONS")
+    print("-" * 80)
+    for index, question in enumerate(analysis.follow_up_questions, start=1):
         print(f"{index}. {question}")
 
 
 # -----------------------------------------------------------------------------
 # Main execution entry point
 # -----------------------------------------------------------------------------
+@traceable(name="main_application_flow")
 def main() -> None:
     """
-    Orchestrates the entire analysis workflow.
+    Entry point for the script.
 
-    Steps:
-    1. Load environment configuration
-    2. Validate API credentials
-    3. Build the LLM pipeline
-    4. Run inference
-    5. Display results
+    The workflow:
+        1. Load environment configuration
+        2. Validate required credentials
+        3. Execute the analysis pipeline
+        4. Print the result
     """
 
+    # Load environment variables from the .env file
     load_dotenv()
 
-    # Ensure required API key exists
+    # Ensure required API keys are present
     require_env_var("OPENAI_API_KEY")
 
-    biography_text = get_biography_text()
+    # Validate tracing configuration if enabled
+    validate_langsmith_configuration()
 
-    # Build the LangChain pipeline
-    chain = build_chain()
+    # Retrieve example case text
+    str_case_text = get_customer_case_text()
 
     try:
-        # Execute the chain with input data
-        analysis = chain.invoke({"biography_text": biography_text})
+        # Run the analysis workflow
+        obj_analysis = run_customer_case_analysis(str_case_text)
 
-    except ValidationError as validation_error:
+    except ValidationError as obj_validation_error:
+        # Structured output validation failure
         raise RuntimeError(
-            "The model response did not match the expected structured schema."
-        ) from validation_error
+            "Model output did not match the expected schema."
+        ) from obj_validation_error
 
-    except Exception as exc:
+    except Exception as obj_exception:
+        # Catch-all failure handler
         raise RuntimeError(
-            "Biography analysis failed. Check your model access, environment "
-            "variables, and installed package versions."
-        ) from exc
+            "Case analysis failed. Check configuration and dependencies."
+        ) from obj_exception
 
-    # Display formatted output
-    print_analysis(analysis)
+    # Display formatted results
+    print_analysis(obj_analysis)
 
 
-# Standard Python entry point
+# Standard Python execution guard
 if __name__ == "__main__":
     main()
