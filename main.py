@@ -60,7 +60,7 @@ from langsmith import traceable
 
 
 # -----------------------------------------------------------------------------
-# Environment validation helper
+# Environment validation helpers
 # -----------------------------------------------------------------------------
 def require_env_var(variable_name: str) -> str:
     """
@@ -69,6 +69,15 @@ def require_env_var(variable_name: str) -> str:
     In production AI systems, missing configuration (API keys, service URLs)
     can cause obscure runtime failures. This helper enforces a fail-fast
     strategy so configuration problems are detected immediately at startup.
+
+    Args:
+        variable_name: Name of the environment variable to validate.
+
+    Returns:
+        The stripped value of the requested environment variable.
+
+    Raises:
+        RuntimeError: If the variable is missing or empty.
     """
 
     # Retrieve the environment variable and remove surrounding whitespace
@@ -85,12 +94,52 @@ def require_env_var(variable_name: str) -> str:
     return variable_value
 
 
+def get_env_float(variable_name: str, default_value: float) -> float:
+    """
+    Read a floating-point configuration value from the environment.
+
+    This is useful for numeric runtime settings such as model temperature.
+
+    Args:
+        variable_name: Name of the environment variable to read.
+        default_value: Fallback value if the variable is not set.
+
+    Returns:
+        A validated float value.
+
+    Raises:
+        RuntimeError: If the value exists but cannot be parsed as a float.
+    """
+
+    # Read the raw environment value
+    raw_value = os.getenv(variable_name, "").strip()
+
+    # Use the supplied default if the variable is absent or blank
+    if not raw_value:
+        return default_value
+
+    try:
+        return float(raw_value)
+    except ValueError as obj_error:
+        raise RuntimeError(
+            f"Environment variable '{variable_name}' must be a valid float. "
+            f"Received: '{raw_value}'."
+        ) from obj_error
+
+
 def validate_langsmith_configuration() -> None:
     """
-    Validate tracing configuration only if tracing is enabled.
+    Validate LangSmith tracing configuration only if tracing is enabled.
 
     LangSmith tracing is optional in local environments. However, if tracing
-    is enabled via environment configuration, then a valid API key must exist.
+    is enabled via environment configuration, then the required LangSmith
+    settings must exist.
+
+    Required when tracing is enabled:
+        - LANGSMITH_API_KEY
+
+    Optional but recommended:
+        - LANGSMITH_PROJECT
     """
 
     # Determine whether tracing is enabled via environment configuration
@@ -101,6 +150,12 @@ def validate_langsmith_configuration() -> None:
     # If tracing is enabled, ensure the LangSmith API key is available
     if bool_tracing_enabled:
         require_env_var("LANGSMITH_API_KEY")
+
+        # Read the project name if supplied and explicitly set it in the runtime
+        # environment so LangSmith consistently groups traces under that project.
+        str_langsmith_project = os.getenv("LANGSMITH_PROJECT", "").strip()
+        if str_langsmith_project:
+            os.environ["LANGSMITH_PROJECT"] = str_langsmith_project
 
 
 # -----------------------------------------------------------------------------
@@ -216,7 +271,6 @@ def build_prompt() -> ChatPromptTemplate:
         [
             (
                 "system",
-                # System message defines behaviour constraints for the model
                 "You are a careful case analysis assistant. "
                 "Use only the information contained in the provided text. "
                 "Do not introduce external facts or assumptions. "
@@ -224,7 +278,6 @@ def build_prompt() -> ChatPromptTemplate:
             ),
             (
                 "user",
-                # User message provides the task and the input text
                 "Analyse the case notes below and return:\n"
                 "1. A summary of the customer's issue\n"
                 "2. The relevant product or service area\n"
@@ -251,14 +304,24 @@ def build_model():
 
     The provider-agnostic interface makes it easy to change the underlying
     model without modifying the rest of the codebase.
+
+    Environment variables used:
+        - MODEL_NAME
+        - MODEL_TEMPERATURE
     """
 
-    # Read model name from environment configuration
+    # Read the model name from environment configuration
     str_model_name = require_env_var("MODEL_NAME")
 
+    # Read model temperature from environment configuration
+    flt_model_temperature = get_env_float(
+        variable_name="MODEL_TEMPERATURE",
+        default_value=0.0,
+    )
+
     return init_chat_model(
-        model=str_model_name,  # model identifier from .env
-        temperature=0,         # deterministic output improves consistency
+        model=str_model_name,
+        temperature=flt_model_temperature,
     )
 
 
@@ -383,15 +446,19 @@ def main() -> None:
     The workflow:
         1. Load environment configuration
         2. Validate required credentials
-        3. Execute the analysis pipeline
-        4. Print the result
+        3. Apply optional LangSmith configuration
+        4. Execute the analysis pipeline
+        5. Print the result
     """
 
     # Load environment variables from the .env file
     load_dotenv()
 
-    # Ensure required API keys are present
+    # Ensure the LLM provider API key is present
     require_env_var("OPENAI_API_KEY")
+
+    # Ensure the model name is configured
+    require_env_var("MODEL_NAME")
 
     # Validate tracing configuration if enabled
     validate_langsmith_configuration()
@@ -412,7 +479,8 @@ def main() -> None:
     except Exception as obj_exception:
         # Catch-all failure handler
         raise RuntimeError(
-            "Case analysis failed. Check configuration and dependencies."
+            "Case analysis failed. Check configuration, environment variables, "
+            "and installed dependencies."
         ) from obj_exception
 
     # Display formatted results
